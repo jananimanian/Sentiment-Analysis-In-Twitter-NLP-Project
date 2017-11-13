@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split #used for cross validation
 import pandas as pd #used for dataframe constuction
 import numpy as np #used for columnstack
 from sklearn.metrics import recall_score # to calculate recall score
+import collections #used to collect the set of actual and predicted labels
 
 #read training data
 def read_training_data(filename):
@@ -145,7 +146,7 @@ for cols in actual_training_data:
     sentence=cols[3];
     #print(sentence)
     preprocessed_sentence=preprocessing(sentence)
-    #Converting the tweets into lowercase and eliminating words with size less than three
+    #Converting the tweets into lowercase and eliminating wo    rds with size less than three
     words_filtered=[e.lower() for e in preprocessed_sentence.split() if len(e) >=3]
     tweets.append((topic,words_filtered,sentiment))
 
@@ -176,7 +177,7 @@ def extract_features(tweets):
     tweets_words=set(tweets)
     features={}
     for word in word_features:
-       features['contains(%s)' %word]=word in tweets_words
+           features['contains(%s)' %word]=word in tweets_words
     return features
 ##
 #train_tweets,test_tweets=train_test_split(tweets,test_size=0.3)
@@ -213,9 +214,34 @@ for cols in tweets_per_topic:
             accuracy=nltk.classify.accuracy(classifier,testing_set)
             test_accuracy=test_accuracy+accuracy
             print("test accuracy",accuracy)
-    topic_average=topic_average+(test_accuracy/test_topic_count)
+            actual = collections.defaultdict(set)
+            predicted = collections.defaultdict(set)
+            actual_label=[]
+            predicted_label=[]
+            for i, (feats, label) in enumerate(testing_set):
+                actual[label].add(i)
+                observed = classifier.classify(feats)
+                predicted[observed].add(i)
+                actual_label.append(label)
+                predicted_label.append(label)
     
+            conf_matrix=nltk.ConfusionMatrix(actual_label,predicted_label)
+            print("Contingency table values:\n")
+            print(conf_matrix)
+        
+            print("---------------------Classification Report------------------------")
+            class_values=actual.keys()
+            for i in class_values:
+                print("For sentiment:" +str(i))
+                print("-----------------------------------------------")
+                print("Precision value:")
+                print(nltk.precision(actual[str(i)],predicted[str(i)]))
+                print("Recall value :")
+                print(nltk.recall(actual[str(i)],predicted[str(i)]))
+                print("F measure is :")
+                print(nltk.f_measure(actual[str(i)],predicted[str(i)]))
+                print("-----------------------------------------------")
+    topic_average=topic_average+(test_accuracy/test_topic_count)
+    break
 NB_Accuracy=topic_average/topic_count;
 print("Task B Topic Averaged Accuracy for Naive Bayes Unigram is :",NB_Accuracy )
-
-
