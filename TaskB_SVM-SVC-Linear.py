@@ -164,6 +164,8 @@ traintweet_df.columns=['topic','tweet','sentiment']
 tweets_per_topic=traintweet_df.groupby('topic')
 topic_count=0;
 topic_average=0;
+MAR_macro_average=0;
+
 for cols in tweets_per_topic:
     topic_count=topic_count+1;
     topicwise_df=cols[1]
@@ -178,6 +180,7 @@ for cols in tweets_per_topic:
         t1 = time.time()
         test_topic_count=0;
         test_accuracy=0;
+        test_MAR=0;
         time_rbf_train = t1-t0
         print("Modelling Time for a Topic:",cols[0],"\n")
         print("Total time taken to train %ds" %(time_rbf_train))
@@ -188,7 +191,9 @@ for cols in tweets_per_topic:
                 test_vectors = vectorizer.transform(topicwise_test_df['tweet'].tolist())
                 prediction_rbf = classifier_linearsvm.predict(test_vectors)
                 accuracy=((accuracy_score(topicwise_test_df['sentiment'].tolist(),prediction_rbf)))
+                MAR = ((recall_score(topicwise_test_df['sentiment'].tolist(),prediction_rbf, average='macro')))
                 test_accuracy=test_accuracy+accuracy
+                test_MAR=test_MAR+MAR;
                 print("Classification report for Topic:",cols[0],"\n")
                 print(classification_report(topicwise_test_df['sentiment'],prediction_rbf))
                 t2 = time.time()
@@ -205,6 +210,7 @@ for cols in tweets_per_topic:
         t1 = time.time()
         test_topic_count=0;
         test_accuracy=0;
+        test_MAR=0;
         time_rbf_train = t1-t0
         print("Modelling Time for a Topic:",cols[0],"\n")
         print("Total time taken to train %ds" %(time_rbf_train))
@@ -215,7 +221,9 @@ for cols in tweets_per_topic:
                 test_vectors = vectorizer.transform(topicwise_test_df['tweet'].tolist())
                 prediction_rbf = classifier_linearsvm.predict(test_vectors)
                 accuracy=((accuracy_score(topicwise_test_df['sentiment'].tolist(),prediction_rbf)))
-                test_accuracy=test_accuracy+accuracy        
+                MAR = ((recall_score(topicwise_test_df['sentiment'].tolist(),prediction_rbf, average='macro')))
+                test_accuracy=test_accuracy+accuracy  
+                test_MAR=test_MAR+MAR;
                 print("Classification report for topic:",cols[0],"\n")
                 print(classification_report(topicwise_test_df['sentiment'],prediction_rbf))
                 t2 = time.time()
@@ -231,6 +239,7 @@ for cols in tweets_per_topic:
         t1 = time.time()
         test_topic_count=0;
         test_accuracy=0;
+        test_MAR=0;
         time_rbf_train = t1-t0
         print("Modelling Time for a Topic:",cols[0],"\n")
         print("Total time taken to train %ds" %(time_rbf_train))
@@ -241,7 +250,9 @@ for cols in tweets_per_topic:
                 test_vectors = vectorizer.transform(topicwise_test_df['tweet'].tolist())
                 prediction_rbf = classifier_linearsvm.predict(test_vectors)
                 accuracy=((accuracy_score(topicwise_test_df['sentiment'].tolist(),prediction_rbf)))
+                MAR = ((recall_score(topicwise_test_df['sentiment'].tolist(),prediction_rbf, average='macro')))
                 test_accuracy=test_accuracy+accuracy;
+                test_MAR=test_MAR+MAR;
                 print("Classification Report for Topic:",cols[0],"\n")
                 print(classification_report(topicwise_test_df['sentiment'],prediction_rbf))
                 t2 = time.time()
@@ -252,5 +263,11 @@ for cols in tweets_per_topic:
     test_accuracy_average=test_accuracy/test_topic_count;
     topic_average=topic_average+test_accuracy_average
     
+    test_MAR_average=test_MAR/test_topic_count;
+    MAR_macro_average=MAR_macro_average+test_MAR_average
+    
 SVM_Accuracy=topic_average/topic_count;
-print("Subtask-B Topic Averaged Accuracy for SVM - SVCLinear is :",SVM_Accuracy)       
+print("Subtask-B Topic Averaged Accuracy for SVM - SVCLinear is :",SVM_Accuracy)  
+
+SVM_MAR=MAR_macro_average/topic_count;
+print("Subtask-B Macro Averaged Recall SVM Linear Kernel is :",SVM_MAR)     

@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split #used for cross validation
 import pandas as pd #used for dataframe constuction
 import numpy as np #used for columnstack
 from sklearn.metrics import recall_score # to calculate recall score
+
 import collections #used to collect the set of actual and predicted labels
 
 #read training data
@@ -189,6 +190,8 @@ tweets_per_topic=traintweet_df.groupby('topic')
 tweets_per_topic2=traintweet_df.groupby('topic').size();
 #print(tweets_per_topic2)
 topic_count=0;
+MAR_macro_average=0;
+test_MAR_average=[]      
 for cols in tweets_per_topic:
     #print("topic",cols[0])
     topic_count=topic_count+1;
@@ -204,8 +207,9 @@ for cols in tweets_per_topic:
     test_accuracy=0
     test_topic_count=0
     topic_average=0
+    test_MAR=[];
     for testcols in tweets_per_topic:
-        #print(testcols[0])
+        recall_values_topicwise = [];
         if(testcols[0]!=cols[0]):
             test_topic_count=test_topic_count+1
             topicwise_test_df=testcols[1]
@@ -223,8 +227,7 @@ for cols in tweets_per_topic:
                 observed = classifier.classify(feats)
                 predicted[observed].add(i)
                 actual_label.append(label)
-                predicted_label.append(label)
-    
+                predicted_label.append(observed)
             conf_matrix=nltk.ConfusionMatrix(actual_label,predicted_label)
             print("Contingency table values:\n")
             print(conf_matrix)
@@ -238,10 +241,17 @@ for cols in tweets_per_topic:
                 print(nltk.precision(actual[str(i)],predicted[str(i)]))
                 print("Recall value :")
                 print(nltk.recall(actual[str(i)],predicted[str(i)]))
+                recall_values_topicwise.append(nltk.recall(actual[str(i)],predicted[str(i)]))
                 print("F measure is :")
                 print(nltk.f_measure(actual[str(i)],predicted[str(i)]))
                 print("-----------------------------------------------")
+            test_MAR.append(sum(recall_values_topicwise)/2);
+            #print("Test_MAR",test_MAR)
+
     topic_average=topic_average+(test_accuracy/test_topic_count)
+    test_MAR_average.append(sum(test_MAR)/test_topic_count);
     break
+MAR_macro_average=sum(test_MAR_average)/topic_count
 NB_Accuracy=topic_average/topic_count;
 print("Task B Topic Averaged Accuracy for Naive Bayes Unigram is :",NB_Accuracy )
+print("Subtask-B Macro Averaged Recall for Naive Bayes Unigram :",MAR_macro_average)  

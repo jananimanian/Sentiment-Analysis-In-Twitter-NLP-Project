@@ -10,6 +10,10 @@ from sklearn.model_selection import train_test_split #used for cross validation
 import pandas as pd #used for dataframe constuction
 import numpy as np #used for columnstack
 from sklearn.metrics import recall_score # to calculate recall score
+import collections #used to collect the set of actual and predicted labels
+from sklearn.metrics import mean_absolute_error #used for calculating mean absolute error
+
+
 
 def read_training_data(filename):
     with open(filename,'r') as tsv:
@@ -210,8 +214,10 @@ traintweet_df.columns=['topic','tweet','sentiment']
 tweets_per_topic=traintweet_df.groupby('topic')
 #print(tweets_per_topic)
 tweets_per_topic2=traintweet_df.groupby('topic').size();
-print(tweets_per_topic2)
+#print(tweets_per_topic2)
 topic_count=0;
+MAE_macro_average =0
+test_MAE_average=[]
 for cols in tweets_per_topic:
     topic_count=topic_count+1;
     #print("topic",cols[0])
@@ -223,12 +229,12 @@ for cols in tweets_per_topic:
     #print("training_set",training_set)
     classifier=nltk.NaiveBayesClassifier.train(training_set)
     prediction=classifier.labels();
-    print(prediction)
+    #print(prediction)
     test_accuracy=0
     test_topic_count=0
     topic_average=0
+    test_MAE =[]
     for testcols in tweets_per_topic:
-        #print(testcols[0])
         if(testcols[0]!=cols[0]):
             test_topic_count=test_topic_count+1
             topicwise_test_df=testcols[1]
@@ -237,11 +243,136 @@ for cols in tweets_per_topic:
             accuracy=nltk.classify.accuracy(classifier,testing_set)
             test_accuracy=test_accuracy+accuracy
             print(accuracy)
-    topic_average=topic_average+(test_accuracy/test_topic_count)
+            actual = collections.defaultdict(set)
+            predicted = collections.defaultdict(set)
+            actual_label=[]
+            predicted_label=[]
+            for i, (feats, label) in enumerate(testing_set):
+                actual[label].add(i)
+                observed = classifier.classify(feats)
+                predicted[observed].add(i)
+                actual_label.append(label)
+                predicted_label.append(observed)
+                #print("Actual label",actual_label)
+                #print("predicted_label",predicted_label)
+            conf_matrix=nltk.ConfusionMatrix(actual_label,predicted_label)
+            print("Contingency table values:\n")
+            print(conf_matrix)
+        
+            print("---------------------Classification Report------------------------")
+            class_values=actual.keys()
+            prediction_hneg = []
+            prediction_neg = []
+            prediction_neu = []
+            prediction_pos = []
+            prediction_hpos = []
+            true_values_hneg = []
+            true_values_neg = []
+            true_values_neu = []
+            true_values_pos = []
+            true_values_hpos = []
+            
+            print("actual",actual.values())
+            print("predicted",predicted[1])
+            print("actuakl _ label",actual_label)
+            print("predicted_label",predicted_label)
+            for i in class_values:
+                print("For sentiment:" +str(i))
+                print("-----------------------------------------------")
+                print("Precision value:")
+                print(nltk.precision(actual[str(i)],predicted[str(i)]))
+                print("Recall value :")
+                print(nltk.recall(actual[str(i)],predicted[str(i)]))
+                print("F measure is :")
+                print(nltk.f_measure(actual[str(i)],predicted[str(i)]))
+                print("-----------------------------------------------")
+                
+                if (int(i) == -1):
+                    print("insuidse -1")
+                    for index,i in enumerate(actual[str(i)]):
+                        #print("outside labels",predicted_label[i])
+                        prediction_neg.append(int(predicted_label[i]))
+                        true_values_neg.append(int(actual_label[i]))
+                elif(int(i) == -2):
+                    print("inside -2")
+                    for index,i in enumerate(actual[str(i)]):
+                        prediction_hneg.append(int(predicted_label[i]))
+                        true_values_hneg.append(int(actual_label[i]))
+                    
+                elif(int(i) == 0):
+                    print("inside o")
+                    for index,i in enumerate(actual[str(i)]):
+                        prediction_neu.append(int(predicted_label[i]))
+                        true_values_neu.append(int(actual_label[i]))
+                
+                elif(int(i) == 1):
+                    print("inside 1")
+                    for index,i in enumerate(actual[str(i)]):
+                        prediction_pos.append(int(predicted_label[i]))
+                        true_values_pos.append(int(actual_label[i]))
+                
+                elif(int(i) == 2):
+                    print("inside 2")
+                    for index,i in enumerate(actual[str(i)]):
+                        prediction_hpos.append(int(predicted_label[i]))
+                        true_values_hpos.append(int(actual_label[i]))
+                        
+            print(prediction_neg)
+            print(prediction_hneg)
+            print(prediction_neu)
+            print(prediction_pos)
+            print(prediction_hpos)
+            print(true_values_neg)
+            print(true_values_hneg)
+            print(true_values_neu)
+            print(true_values_pos)
+            print(true_values_hpos)
+            
+            if(len(true_values_neg)!=0):
+                a = list(map(int,true_values_neg))
+                c = list(map(int,prediction_neg))
+                print("t",true_values_neg)
+                print("p",prediction_neg)
+                MAE_neg = ((mean_absolute_error(true_values_neg,prediction_neg)))
+                #MAE_neg = ((mean_absolute_error(a,c)))
+                print("MAE NEG",MAE_neg)
+            else:
+                MAE_neg = 0;
+            if(len(true_values_hneg)!=0):
+                MAE_hneg = ((mean_absolute_error(true_values_hneg,prediction_hneg)))
+                print("MAE HNEG",MAE_hneg)
+            else:
+                MAE_hneg = 0;
+            if(len(true_values_neu)!=0):
+                MAE_neu = ((mean_absolute_error(true_values_neu,prediction_neu)))
+                print("MAE NEU",MAE_neu)
 
+            else:
+                MAE_neu = 0;
+            if(len(true_values_pos)!=0):
+                MAE_pos = ((mean_absolute_error(true_values_pos,prediction_pos)))
+                print("MAE pos",MAE_pos)
+
+            else:
+                MAE_pos = 0;
+            if(len(true_values_hpos)!=0):
+                MAE_hpos = ((mean_absolute_error(true_values_hpos,prediction_hpos)))
+                print("MAE hpos",MAE_hpos)
+
+            else:
+                MAE_hpos = 0;
+                
+            test_MAE.append((MAE_neg+MAE_hneg+MAE_neu+MAE_pos+MAE_hpos)/len(class_values))
+            
+    topic_average=topic_average+(test_accuracy/test_topic_count)
+    test_MAE_average.append(sum(test_MAE)/test_topic_count);
+    print("test",test_MAE_average)
+
+    break
+MAE_macro_average=sum(test_MAE_average)/topic_count
 NB_Avg=topic_average/topic_count;
 print("SubTask-C Naive Bayes Classifier with Unigram feature extraction Accuracy is :", NB_Avg)
-
+print("Subtask-C Macro Averaged Mean Absolute Error for Naive Bayes Unigram :",MAE_macro_average)  
 
 
 
