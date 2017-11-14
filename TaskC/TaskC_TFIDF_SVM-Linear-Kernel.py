@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Nov 12 11:08:52 2017
+
+@author: linkarc
+"""
+
 import matplotlib.pyplot as plt # used for plotting graphs
 from plotly.offline import download_plotlyjs, init_notebook_mode,  plot # used for plotting graphs
 from plotly.graph_objs import *   # used for plotting graphs
@@ -13,6 +21,7 @@ import time # used to calculate time of the classification
 from sklearn import svm # used to invoke classifier
 from sklearn.metrics import classification_report # used for classification report
 from sklearn.metrics import accuracy_score # used for accuracy score calculation
+from sklearn.metrics import mean_absolute_error #used for calculating mean absolute error
 
 def read_training_data(filename):
     with open(filename,'r') as tsv:
@@ -169,6 +178,7 @@ def preprocessing(original_tweet):
 sentences=[]
 sentiment=[]
 topic=[]
+
 for cols in actual_training_data:
     topic.append(cols[1])
     sentences.append(cols[3])
@@ -189,9 +199,15 @@ traintweet_df.columns=['topic','tweet','sentiment']
 tweets_per_topic=traintweet_df.groupby('topic')
 topic_count=0;
 topic_average=0;
+MAE = 0;
+MAE_macro_average = 0;
+c = []
+
+
 for cols in tweets_per_topic:
     topic_count=topic_count+1;
     topicwise_df=cols[1]
+    
     topic_labels=np.unique(topicwise_df['sentiment']);
     topic_name=np.unique(topicwise_df['topic']);
     print("Topic Name :",topic_name)
@@ -204,17 +220,84 @@ for cols in tweets_per_topic:
     t1 = time.time()
     test_topic_count=0;
     test_accuracy=0;
+    test_MAE = 0;
     time_rbf_train = t1-t0
     print("Modelling Time for a Topic:",cols[0],"\n")
     print("Total time taken to train %ds" %(time_rbf_train))
     for testcols in tweets_per_topic:
         if(testcols[0]!=cols[0]):
+            print("Test topic name",testcols[0])
             test_topic_count=test_topic_count+1
             topicwise_test_df=testcols[1]
             test_vectors = vectorizer.transform(topicwise_test_df['tweet'].tolist())
             prediction_rbf = classifier_linear.predict(test_vectors)
+            test_topic_labels=np.unique(topicwise_test_df['sentiment']);          
+            a = list(map(int,topicwise_test_df['sentiment']))
+            b = list(map(int,test_topic_labels))
+            c = list(map(int,prediction_rbf))
+ 
+            prediction_hneg = []
+            prediction_neg = []
+            prediction_neu = []
+            prediction_pos = []
+            prediction_hpos = []
+            true_values_hneg = []
+            true_values_neg = []
+            true_values_neu = []
+            true_values_pos = []
+            true_values_hpos = []
+
+            
+            for index,i in enumerate(a):
+            
+                
+                if (i == -1):
+                    prediction_neg.append(int(c[index]))
+                    true_values_neg.append(int(a[index]))
+                
+                elif(i == -2):
+                    prediction_hneg.append(int(c[index]))
+                    true_values_hneg.append(int(a[index]))
+                        
+                elif(i == 0):
+                    prediction_neu.append(int(c[index]))
+                    true_values_neu.append(int(a[index]))
+                    
+                elif(i == 1):
+                    prediction_pos.append(int(c[index]))
+                    true_values_pos.append(int(a[index]))
+             
+                elif(i == 2):
+                    prediction_hpos.append(int(c[index]))
+                    true_values_hpos.append(int(a[index]))
+               
+                             
             accuracy=((accuracy_score(topicwise_test_df['sentiment'].tolist(),prediction_rbf)))
+            #MAE = ((mean_absolute_error(list(map(int,topicwise_test_df['sentiment'])),list(map(int,prediction_rbf)))))
+            if(len(true_values_neg)!=0):
+                MAE_neg = ((mean_absolute_error(true_values_neg,prediction_neg)))
+            else:
+                MAE_neg = 0;
+            if(len(true_values_hneg)!=0):
+                MAE_hneg = ((mean_absolute_error(true_values_hneg,prediction_hneg)))
+            else:
+                MAE_hneg = 0;
+            if(len(true_values_neu)!=0):
+                MAE_neu = ((mean_absolute_error(true_values_neu,prediction_neu)))
+            else:
+                MAE_neu = 0;
+            if(len(true_values_pos)!=0):
+                MAE_pos = ((mean_absolute_error(true_values_pos,prediction_pos)))
+            else:
+                MAE_pos = 0;
+            if(len(true_values_hpos)!=0):
+                MAE_hpos = ((mean_absolute_error(true_values_hpos,prediction_hpos)))
+            else:
+                MAE_hpos = 0;
+                
+            MAE = (MAE_neg+MAE_hneg+MAE_neu+MAE_pos+MAE_hpos)/len(b)
             test_accuracy=test_accuracy+accuracy;
+            test_MAE=test_MAE+MAE;
             print("Classification Report for Topic:",cols[0],"\n")
             print(classification_report(topicwise_test_df['sentiment'],prediction_rbf))
             t2 = time.time()
@@ -222,8 +305,17 @@ for cols in tweets_per_topic:
             time_rbf_predict = t2-t1
             print("Prediction Time for a Topic:",testcols[0],"\n")
             print("Total time taken to predict %ds" %(time_rbf_predict))
+            
     test_accuracy_average=test_accuracy/test_topic_count;
     topic_average=topic_average+test_accuracy_average
     
+    test_MAE_average=test_MAE/test_topic_count;
+    MAE_macro_average=MAE_macro_average+test_MAE_average
+    
 SVM_Accuracy=topic_average/topic_count;
-print("Subtask-B Topic Averaged Accuracy SVM Linear Kernel is :",SVM_Accuracy)       
+print("Subtask-C Topic Averaged Accuracy SVM Linear Kernel is :",SVM_Accuracy)
+
+SVM_MAE=(MAE_macro_average/topic_count);
+print("Subtask-C Macro Averaged Mean Absolute Error SVM Linear Kernel is :",SVM_MAE)   
+
+  
